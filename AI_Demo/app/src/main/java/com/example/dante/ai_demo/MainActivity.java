@@ -25,10 +25,8 @@ import java.util.List;
 
 import static java.security.AccessController.getContext;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends IatBasicActivity {
 
-    //用于查询的EditText对象
-    EditText editText ;
 
     //用户添加信息的EditText对象
     EditText addInfoEditText;
@@ -36,14 +34,24 @@ public class MainActivity extends AppCompatActivity {
     //用户添加信息的Spinner对象
     Spinner spinner;
 
+    //语音识别的ui组件
+    private EditText mContent;
+    private Button mBtnVoice;
+
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
 
-        //用于查询的EditText的id绑定
-        editText = findViewById(R.id.content_edt);
+
+
+        //语音识别的组件初始化
+        initView();
+
+
         //用于添加信息的EditText的id绑定
         addInfoEditText  = findViewById(R.id.add_rubbish_edt);
 
@@ -115,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
                 };
 
                 // Filter results WHERE "title" = 'My Title'
-                String content = editText.getText().toString();
+                String content = mContent.getText().toString();
                 String selection = Contract.Entry.COLUMN_NAME_RUBBISH_NAME + " = ?";
                 String[] selectionArgs = {content};
 
@@ -223,5 +231,26 @@ public class MainActivity extends AppCompatActivity {
                 listView.setAdapter(rubbishAdapter);
             }
         });
+    }
+
+
+    //语音识别的方法
+    /**
+     * 初始化视图
+     */
+    private void initView(){
+        mContent = (EditText)findViewById(R.id.et_content);
+        mBtnVoice =(Button)findViewById(R.id.btn_voice);
+        mBtnVoice.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+               clickMethod();
+
+            }
+        });
+        //调用语音识别类方法
+
+        initIatData(mContent);
     }
 }

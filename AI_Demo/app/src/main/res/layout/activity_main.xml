@@ -14,11 +14,7 @@
 
         />
 
-    <EditText
-        android:id="@+id/content_edt"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="info" />
+
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -43,6 +39,27 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="add" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="10dp"
+        >
+        <EditText
+            android:id="@+id/et_content"
+            android:layout_width="match_parent"
+            android:layout_height="45dp"
+            android:hint="识别的结果"
+            />
+        <Button
+            android:id="@+id/btn_voice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="点击录音"
+            />
 
     </LinearLayout>
 
