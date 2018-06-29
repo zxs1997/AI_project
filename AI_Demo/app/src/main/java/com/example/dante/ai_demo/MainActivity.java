@@ -15,6 +15,7 @@ import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import com.baidu.aip.imageclassify.AipImageClassify;
 import com.example.dante.ai_demo.DatabasePack.Contract;
 import com.example.dante.ai_demo.DatabasePack.Db_helper;
 import com.example.dante.ai_demo.ListViewPack.RubbishAdapter;
@@ -38,37 +39,39 @@ public class MainActivity extends IatBasicActivity {
     private EditText mContent;
     private Button mBtnVoice;
 
-
+    //百度识图相关api的设置：设置APPID/AK/SK
+    public static final String APP_ID = "11245976";
+    public static final String API_KEY = "bzz14STCaVGZfmBo2dAlN1NQ";
+    public static final String SECRET_KEY = "G1nFDGxIW92OBDQURS2UljY0CaxFiUSs";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
+        //百度识图的初始化操作
+        // 初始化一个AipImageClassifyClient
+        AipImageClassify client = new AipImageClassify(APP_ID, API_KEY, SECRET_KEY);
+        // 可选：设置网络连接参数
+        client.setConnectionTimeoutInMillis(2000);
+        client.setSocketTimeoutInMillis(60000);
+        // 可选：设置log4j日志输出格式，若不设置，则使用默认配置
+        // 也可以直接通过jvm启动参数设置此环境变量
+        System.setProperty("aip.log4j.conf", "path/to/your/log4j.properties");
+        Log.v("AAA","初始化成功");
 
 
         //语音识别的组件初始化
         initView();
 
-
         //用于添加信息的EditText的id绑定
-        addInfoEditText  = findViewById(R.id.add_rubbish_edt);
+        addInfoEditText = findViewById(R.id.add_rubbish_edt);
 
         //Spinner组件的初始化
-        spinner = (Spinner) findViewById(R.id.rubbish_spinner);
-        // Create an ArrayAdapter using the string array and a default spinner layout
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
-                R.array.rubbish_catalogue_array, android.R.layout.simple_spinner_item);
-        // Specify the layout to use when the list of choices appears
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        // Apply the adapter to the spinner
-        spinner.setAdapter(adapter);
+        initSpinner();
 
         //数据库的helper
-        final Db_helper mDbHelper =  new Db_helper(MainActivity.this.getBaseContext());
-
-
+        final Db_helper mDbHelper = new Db_helper(MainActivity.this.getBaseContext());
 
         //添加按钮相关操作
         Button add_button = findViewById(R.id.add_btn);
@@ -93,16 +96,11 @@ public class MainActivity extends IatBasicActivity {
                 if (value_part_1.equals(null)) {
                     // Insert the new row, returning the primary key value of the new row
                     long newRowId = db.insert(Contract.Entry.TABLE_NAME, null, values);
-                }else{
-                    Toast.makeText(MainActivity.this,"请输入垃圾名称",Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(MainActivity.this, "请输入垃圾名称", Toast.LENGTH_SHORT).show();
                 }
-
-
-
             }
         });
-
-
 
 
         //查看信息的按钮
@@ -123,6 +121,7 @@ public class MainActivity extends IatBasicActivity {
                 };
 
                 // Filter results WHERE "title" = 'My Title'
+                //对指定的垃圾进行数据库查询
                 String content = mContent.getText().toString();
                 String selection = Contract.Entry.COLUMN_NAME_RUBBISH_NAME + " = ?";
                 String[] selectionArgs = {content};
@@ -143,7 +142,7 @@ public class MainActivity extends IatBasicActivity {
                 );
 
                 List itemIds = new ArrayList<>();
-                while(cursor.moveToNext()) {
+                while (cursor.moveToNext()) {
                     //序号
                     long itemId = cursor.getLong(
                             cursor.getColumnIndexOrThrow(Contract.Entry._ID));
@@ -152,24 +151,18 @@ public class MainActivity extends IatBasicActivity {
                     String r_name = cursor.getString(cursor.getColumnIndexOrThrow(Contract.Entry.COLUMN_NAME_RUBBISH_NAME));
                     //垃圾类别
                     String c_name = cursor.getString(cursor.getColumnIndexOrThrow(Contract.Entry.COLUMN_NAME_RUBBISH_CATALOGUE));
-                    Log.v("AAA",itemId+" "+r_name+" "+c_name);
-                    Toast.makeText(MainActivity.this,c_name,Toast.LENGTH_SHORT).show();
+                    Log.v("AAA", itemId + " " + r_name + " " + c_name);
+                    Toast.makeText(MainActivity.this, c_name, Toast.LENGTH_SHORT).show();
                 }
                 cursor.close();
-                Log.v("AAA","搞定了");
+                Log.v("AAA", "搞定了");
             }
         });
-
-
-
-
 
 
         //listview的相关操作
         // Create an ArrayList of AndroidFlavor objects
         final ArrayList<RubbishInfo> rubbishInfos = new ArrayList<RubbishInfo>();
-
-
 
         // Create an {@link AndroidFlavorAdapter}, whose data source is a list of
         // {@link AndroidFlavor}s. The adapter knows how to create list item views for each item
@@ -187,21 +180,13 @@ public class MainActivity extends IatBasicActivity {
                 //先进行数据库查询操作，把数据库信息放入listview的ArrayList里面
                 SQLiteDatabase db = mDbHelper.getReadableDatabase();
 
-            // Define a projection that specifies which columns from the database
-            // you will actually use after this query.
+                // Define a projection that specifies which columns from the database
+                // you will actually use after this query.
                 String[] projection = {
                         BaseColumns._ID,
                         Contract.Entry.COLUMN_NAME_RUBBISH_NAME,
                         Contract.Entry.COLUMN_NAME_RUBBISH_CATALOGUE
                 };
-
-            // Filter results WHERE "title" = 'My Title'
-                String selection = Contract.Entry.COLUMN_NAME_RUBBISH_NAME + " = ?";
-                String[] selectionArgs = { "My Title" };
-
-            // How you want the results sorted in the resulting Cursor
-                String sortOrder =
-                        Contract.Entry.COLUMN_NAME_RUBBISH_CATALOGUE + " DESC";
 
                 Cursor cursor = db.query(
                         Contract.Entry.TABLE_NAME,   // The table to query
@@ -214,15 +199,14 @@ public class MainActivity extends IatBasicActivity {
                 );
 
                 //查询完毕，将信息添加进listview的ArrayList里
-                List itemIds = new ArrayList<>();
-                while(cursor.moveToNext()) {
+                while (cursor.moveToNext()) {
                     long itemId = cursor.getLong(
                             cursor.getColumnIndexOrThrow(Contract.Entry._ID));
                     String itemName = cursor.getString(
                             cursor.getColumnIndexOrThrow(Contract.Entry.COLUMN_NAME_RUBBISH_NAME));
                     String itemCatalogue = cursor.getString(
                             cursor.getColumnIndexOrThrow(Contract.Entry.COLUMN_NAME_RUBBISH_CATALOGUE));
-                    rubbishInfos.add(new RubbishInfo((int)itemId, itemName,itemCatalogue));
+                    rubbishInfos.add(new RubbishInfo((int) itemId, itemName, itemCatalogue));
                 }
                 cursor.close();
 
@@ -233,19 +217,31 @@ public class MainActivity extends IatBasicActivity {
         });
     }
 
+    private void initSpinner() {
+        spinner = (Spinner) findViewById(R.id.rubbish_spinner);
+        // Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.rubbish_catalogue_array, android.R.layout.simple_spinner_item);
+        // Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        spinner.setAdapter(adapter);
+    }
+
 
     //语音识别的方法
+
     /**
      * 初始化视图
      */
-    private void initView(){
-        mContent = (EditText)findViewById(R.id.et_content);
-        mBtnVoice =(Button)findViewById(R.id.btn_voice);
+    private void initView() {
+        mContent = (EditText) findViewById(R.id.et_content);
+        mBtnVoice = (Button) findViewById(R.id.btn_voice);
         mBtnVoice.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
 
-               clickMethod();
+                clickMethod();
 
             }
         });
