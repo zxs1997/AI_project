@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -10,10 +11,9 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
-
-        />
-
+        android:layout_gravity="center"
+        android:text="下面一行用来自行添加数据库"
+        android:textSize="24sp" />
 
 
     <LinearLayout
@@ -23,16 +23,16 @@
 
 
         <EditText
+            android:id="@+id/add_rubbish_edt"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:id="@+id/add_rubbish_edt"/>
+            android:layout_weight="1" />
 
         <Spinner
+            android:id="@+id/rubbish_spinner"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:id="@+id/rubbish_spinner"/>
+            android:layout_weight="1" />
 
         <Button
             android:id="@+id/add_btn"
@@ -42,43 +42,51 @@
 
     </LinearLayout>
 
-    <LinearLayout
+
+    <EditText
+        android:id="@+id/et_content"
+        android:layout_width="match_parent"
+        android:layout_height="45dp"
+        android:hint="要查询的垃圾" />
+
+
+    <ImageView
+        android:id="@+id/picture_iv"
+        android:layout_width="60dp"
+        android:layout_height="80dp"
+        android:layout_gravity="center" />
+
+    <Button
+        android:id="@+id/btn_voice"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginTop="10dp"
-        >
-        <EditText
-            android:id="@+id/et_content"
-            android:layout_width="match_parent"
-            android:layout_height="45dp"
-            android:hint="识别的结果"
-            />
-        <Button
-            android:id="@+id/btn_voice"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="点击录音"
-            />
+        android:text="点击语音识别输入" />
 
-    </LinearLayout>
+    <Button
+        android:id="@+id/take_photo_btn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="点击拍照识图输入" />
+
 
     <Button
         android:id="@+id/test_byn"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="check" />
+        android:text="查询垃圾所属类别" />
 
     <Button
-        android:layout_width="wrap_content"
+        android:id="@+id/query_btn"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="查看数据库"
-        android:id="@+id/query_btn"/>
+        android:text="查看已有数据库" />
 
     <ListView
+        android:id="@+id/listview_rubbish"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:id="@+id/listview_rubbish"/>
+        android:layout_height="match_parent" />
 
 
 </LinearLayout>
+
+

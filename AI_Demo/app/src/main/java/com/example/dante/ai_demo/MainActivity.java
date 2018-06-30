@@ -1,16 +1,26 @@
 package com.example.dante.ai_demo;
 
 import android.content.ContentValues;
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
+import android.os.Build;
 import android.provider.BaseColumns;
+import android.provider.MediaStore;
+import android.support.annotation.Nullable;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.Toast;
@@ -21,12 +31,20 @@ import com.example.dante.ai_demo.DatabasePack.Db_helper;
 import com.example.dante.ai_demo.ListViewPack.RubbishAdapter;
 import com.example.dante.ai_demo.ListViewPack.RubbishInfo;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import static java.security.AccessController.getContext;
 
 public class MainActivity extends IatBasicActivity {
+
+    //启用照相机变量初始化
+    public static final int TAKE_PHOTO =1;
+    ImageView picture;
+    Uri imageUri;
 
 
     //用户添加信息的EditText对象
@@ -48,6 +66,38 @@ public class MainActivity extends IatBasicActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        //显示图片的imageview的id绑定
+        picture = findViewById(R.id.picture_iv);
+        //拍照显示图片的按钮
+        Button takePhotoButton = findViewById(R.id.take_photo_btn);
+        takePhotoButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                //创建File对象，用于存储拍照后的图片
+                File outputImage = new File(getExternalCacheDir(),"output_image.jpg");
+                try {
+                    if (outputImage.exists()){
+                        outputImage.delete();
+                    }
+                    outputImage.createNewFile();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                if (Build.VERSION.SDK_INT>=24){
+                    imageUri = FileProvider.getUriForFile(MainActivity.this,
+                            "com.example.dante.ai_demo.fileprovider",outputImage);
+                }else {
+                    imageUri = Uri.fromFile(outputImage);
+                }
+                //启动相机程序
+                Intent intent = new Intent("android.media.action.IMAGE_CAPTURE");
+                intent.putExtra(MediaStore.EXTRA_OUTPUT,imageUri);
+                startActivityForResult(intent,TAKE_PHOTO);
+                Log.v("AAA","相机程序已启动");
+            }
+        });
+
 
         //百度识图的初始化操作
         // 初始化一个AipImageClassifyClient
@@ -93,7 +143,7 @@ public class MainActivity extends IatBasicActivity {
                 values.put(Contract.Entry.COLUMN_NAME_RUBBISH_CATALOGUE, value_part_2);
 
                 //防止用户忘记输垃圾名称
-                if (value_part_1.equals(null)) {
+                if (!TextUtils.isEmpty(addInfoEditText.getText().toString())) {
                     // Insert the new row, returning the primary key value of the new row
                     long newRowId = db.insert(Contract.Entry.TABLE_NAME, null, values);
                 } else {
@@ -228,6 +278,25 @@ public class MainActivity extends IatBasicActivity {
         spinner.setAdapter(adapter);
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        Log.v("AAA","onActivityResult已启动:"+requestCode);
+        switch (requestCode){
+            case TAKE_PHOTO:
+                if (resultCode == RESULT_OK){
+                    try {
+                        Log.v("AAA","准备显示照片");
+                        Bitmap bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri));
+                        picture.setImageBitmap(bitmap);
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                }
+                break;
+                default:
+                    break;
+        }
+    }
 
     //语音识别的方法
 
