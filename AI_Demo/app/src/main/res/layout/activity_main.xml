@@ -50,12 +50,6 @@
         android:hint="要查询的垃圾" />
 
 
-    <ImageView
-        android:id="@+id/picture_iv"
-        android:layout_width="60dp"
-        android:layout_height="80dp"
-        android:layout_gravity="center" />
-
     <Button
         android:id="@+id/btn_voice"
         android:layout_width="match_parent"

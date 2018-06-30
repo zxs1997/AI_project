@@ -6,13 +6,16 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.PixelFormat;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.provider.BaseColumns;
 import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.support.v4.content.FileProvider;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -31,19 +34,28 @@ import com.example.dante.ai_demo.DatabasePack.Db_helper;
 import com.example.dante.ai_demo.ListViewPack.RubbishAdapter;
 import com.example.dante.ai_demo.ListViewPack.RubbishInfo;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-
-import static java.security.AccessController.getContext;
 
 public class MainActivity extends IatBasicActivity {
 
+    //百度识图返回的json请求的字符串形式
+    String JsonResponse;
+
+    //拍照获取的图片(bitmap格式)
+    Bitmap bitmap;
+
     //启用照相机变量初始化
-    public static final int TAKE_PHOTO =1;
-    ImageView picture;
+    public static final int TAKE_PHOTO = 1;
     Uri imageUri;
 
 
@@ -58,6 +70,8 @@ public class MainActivity extends IatBasicActivity {
     private Button mBtnVoice;
 
     //百度识图相关api的设置：设置APPID/AK/SK
+
+    AipImageClassify client;
     public static final String APP_ID = "11245976";
     public static final String API_KEY = "bzz14STCaVGZfmBo2dAlN1NQ";
     public static final String SECRET_KEY = "G1nFDGxIW92OBDQURS2UljY0CaxFiUSs";
@@ -67,48 +81,46 @@ public class MainActivity extends IatBasicActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //显示图片的imageview的id绑定
-        picture = findViewById(R.id.picture_iv);
         //拍照显示图片的按钮
         Button takePhotoButton = findViewById(R.id.take_photo_btn);
         takePhotoButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 //创建File对象，用于存储拍照后的图片
-                File outputImage = new File(getExternalCacheDir(),"output_image.jpg");
+                File outputImage = new File(getExternalCacheDir(), "output_image.jpg");
                 try {
-                    if (outputImage.exists()){
+                    if (outputImage.exists()) {
                         outputImage.delete();
                     }
                     outputImage.createNewFile();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                if (Build.VERSION.SDK_INT>=24){
+                if (Build.VERSION.SDK_INT >= 24) {
                     imageUri = FileProvider.getUriForFile(MainActivity.this,
-                            "com.example.dante.ai_demo.fileprovider",outputImage);
-                }else {
+                            "com.example.dante.ai_demo.fileprovider", outputImage);
+                } else {
                     imageUri = Uri.fromFile(outputImage);
                 }
                 //启动相机程序
                 Intent intent = new Intent("android.media.action.IMAGE_CAPTURE");
-                intent.putExtra(MediaStore.EXTRA_OUTPUT,imageUri);
-                startActivityForResult(intent,TAKE_PHOTO);
-                Log.v("AAA","相机程序已启动");
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
+                startActivityForResult(intent, TAKE_PHOTO);
+                Log.v("AAA", "相机程序已启动");
             }
         });
 
 
         //百度识图的初始化操作
         // 初始化一个AipImageClassifyClient
-        AipImageClassify client = new AipImageClassify(APP_ID, API_KEY, SECRET_KEY);
+        client = new AipImageClassify(APP_ID, API_KEY, SECRET_KEY);
         // 可选：设置网络连接参数
         client.setConnectionTimeoutInMillis(2000);
         client.setSocketTimeoutInMillis(60000);
         // 可选：设置log4j日志输出格式，若不设置，则使用默认配置
         // 也可以直接通过jvm启动参数设置此环境变量
         System.setProperty("aip.log4j.conf", "path/to/your/log4j.properties");
-        Log.v("AAA","初始化成功");
+        Log.v("AAA", "初始化成功");
 
 
         //语音识别的组件初始化
@@ -205,7 +217,6 @@ public class MainActivity extends IatBasicActivity {
                     Toast.makeText(MainActivity.this, c_name, Toast.LENGTH_SHORT).show();
                 }
                 cursor.close();
-                Log.v("AAA", "搞定了");
             }
         });
 
@@ -225,6 +236,7 @@ public class MainActivity extends IatBasicActivity {
         QueryButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+
                 //先清空之前的ArrayList防止listview堆积
                 rubbishInfos.clear();
                 //先进行数据库查询操作，把数据库信息放入listview的ArrayList里面
@@ -280,21 +292,22 @@ public class MainActivity extends IatBasicActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        Log.v("AAA","onActivityResult已启动:"+requestCode);
-        switch (requestCode){
+        Log.v("AAA", "onActivityResult已启动:" + requestCode);
+        switch (requestCode) {
             case TAKE_PHOTO:
-                if (resultCode == RESULT_OK){
+                if (resultCode == RESULT_OK) {
                     try {
-                        Log.v("AAA","准备显示照片");
-                        Bitmap bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri));
-                        picture.setImageBitmap(bitmap);
+                        bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri));
+                        new RecognizingPicture().execute();
                     } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }
                 break;
-                default:
-                    break;
+            default:
+                break;
         }
     }
 
@@ -318,4 +331,96 @@ public class MainActivity extends IatBasicActivity {
 
         initIatData(mContent);
     }
+
+
+    //百度图像识别方法
+    //图像识别方法
+    public void sample(AipImageClassify client) throws Exception {
+        // 传入可选参数调用接口
+        HashMap<String, String> options = new HashMap<String, String>();
+
+        // 参数为二进制数组
+        //先将bitmap转为二进制数组
+        byte[] file = bitmapToBase64(bitmap);
+
+        Log.v("AAA", "已经获取照片" + file.length + file.toString());
+        JSONObject res = client.advancedGeneral(file, options);
+        Log.v("AAA", "开始识别咯");
+        Log.v("AAA", res.toString(2) + "");
+        JsonResponse = res.toString(2);
+    }
+
+
+    //百度识图处理网络连接时候单开的asyntask
+    class RecognizingPicture extends AsyncTask<Void, Void, Void> {
+
+        @Override
+        protected void onPreExecute() {
+            Toast.makeText(MainActivity.this, "正在识图,识图完毕后会自动显示", Toast.LENGTH_LONG).show();
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            Log.v("AAA", "处理完咯");
+            ParseJson();
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            try {
+                sample(client);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+    }
+
+    private void ParseJson() {
+        try {
+            JSONObject base = new JSONObject(JsonResponse);
+            JSONArray result = base.getJSONArray("result");
+            JSONObject firstObject = (JSONObject) result.get(0);
+            String keyword = firstObject.getString("keyword");
+            mContent.setText(keyword);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    /**
+     * bitmap转为base64
+     *
+     * @param bitmap
+     * @return
+     */
+    public static byte[] bitmapToBase64(Bitmap bitmap) {
+
+
+        ByteArrayOutputStream baos = null;
+        try {
+            if (bitmap != null) {
+                baos = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+                baos.flush();
+                baos.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (baos != null) {
+                    baos.flush();
+                    baos.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return baos.toByteArray();
+    }
+
+
 }
+
